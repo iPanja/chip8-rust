@@ -184,9 +184,9 @@ impl Emu {
                 // 8XY4
                 let x = digit2 as usize;
                 let y = digit3 as usize;
-                
+
                 let (new_vx, carry) = self.v_reg[x].overflowing_add(self.v_reg[y]);
-                let new_vf = if carry {1} else {0};
+                let new_vf = if carry { 1 } else { 0 };
 
                 self.v_reg[x] = new_vx;
                 self.v_reg[0xF] = new_vf; // Special carry bit register
@@ -195,13 +195,13 @@ impl Emu {
                 // 8XY5
                 let x = digit2 as usize;
                 let y = digit3 as usize;
-                
+
                 let (new_vx, borrow) = self.v_reg[x].overflowing_sub(self.v_reg[y]);
                 let new_vf = if borrow { 0 } else { 1 };
 
                 self.v_reg[x] = new_vx;
                 self.v_reg[0xF] = new_vf;
-            } 
+            }
             (8, _, _, 6) => {
                 // 8XY6
                 let x = digit2 as usize;
@@ -219,7 +219,6 @@ impl Emu {
 
                 self.v_reg[x] = new_vx;
                 self.v_reg[0xF] = new_vf;
-                
             } // VX = VY - VX, clearing VF if borrow
             (8, _, _, 0xE) => {
                 // 8XYE
@@ -241,7 +240,6 @@ impl Emu {
                 // ANNN
                 let nnn = op & 0xFFF;
                 self.i_reg = nnn;
-
             } // Set the I Register to 0xNNN
             (0xB, _, _, _) => {
                 // BNNN
@@ -252,7 +250,7 @@ impl Emu {
                 // CXNN
                 let x = digit2 as usize;
                 let nn = (op & 0xFF) as u8;
-                let rng = random();
+                let rng: u8 = random();
 
                 self.v_reg[x] = rng & nn;
             } // VX = rand() & 0xNN
@@ -260,7 +258,7 @@ impl Emu {
                 // Sprite is 0xN pixels tall
                 // On/Off based on value in I
 
-                // 
+                //
                 // Get (x, y) coordinate to draw the sprite at
                 let x_coord = self.v_reg[digit2 as usize] as u16;
                 let y_coord = self.v_reg[digit3 as usize] as u16;
@@ -291,8 +289,7 @@ impl Emu {
                 }
 
                 // VF set if any pixels flipped
-                self.v_reg[0xF] = if flipped {1} else {0};
-
+                self.v_reg[0xF] = if flipped { 1 } else { 0 };
             } // Draw sprite at (VX, VY)
             (0xE, _, 9, 0xE) => {
                 let x = digit2 as usize;
@@ -319,7 +316,8 @@ impl Emu {
                 let x = digit2 as usize;
                 let mut pressed = false;
                 for i in 0..self.keys.len() {
-                    if self.keys[i] { // Key is pressed
+                    if self.keys[i] {
+                        // Key is pressed
                         self.v_reg[x] = i as u8;
                         pressed = true;
                         break;
@@ -356,8 +354,8 @@ impl Emu {
                 let x = digit2 as usize;
                 let vx = self.v_reg[x] as f32;
 
-                let hundreds = (vx/100.0).floor() as u8;
-                let tens = ((vx/10.0) % 10).floor() as u8;
+                let hundreds = (vx / 100.0).floor() as u8;
+                let tens = ((vx / 10.0) % 10.0).floor() as u8;
                 let ones = (vx % 10.0) as u8;
 
                 self.ram[self.i_reg as usize] = hundreds;
@@ -373,7 +371,7 @@ impl Emu {
                 }
             } // Store V0 thru VX into RAM starting at where I Register points
             (0xF, _, 6, 5) => {
-                let x = digit as usize;
+                let x = digit2 as usize;
                 let i = self.i_reg as usize;
 
                 for idx in 0..=x {
@@ -406,5 +404,24 @@ impl Emu {
     fn pop(&mut self) -> u16 {
         self.sp -= 1;
         self.stack[self.sp as usize]
+    }
+
+    // Exposing core to frontend
+    // Expose display
+    pub fn get_display(&self) -> &[bool] {
+        &self.screen
+    }
+
+    // Expose pressing keys
+    pub fn keypress(&mut self, idx: usize, pressed: bool) {
+        self.keys[idx] = pressed;
+    }
+
+    // Expose loading game code into our RAM
+    pub fn load(&mut self, data: &[u8]) {
+        let start = START_ADDR as usize;
+        let end = (START_ADDR as usize) + data.len();
+
+        self.ram[start..end].copy_from_slice(data);
     }
 }
